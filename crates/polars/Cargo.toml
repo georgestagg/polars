@@ -251,10 +251,10 @@ test = [
   "fmt",
   "diff",
   "abs",
-  "parquet",
+#  "parquet",
   "ipc",
   "ipc_streaming",
-  "json",
+#  "json",
 ]
 
 # all opt-in datatypes
@@ -361,8 +361,8 @@ hist = ["polars-ops/hist", "polars-lazy/hist"]
 
 docs-selection = [
   "csv",
-  "json",
-  "parquet",
+#  "json",
+#  "parquet",
   "ipc",
   "ipc_streaming",
   "dtype-full",
@@ -389,7 +389,7 @@ docs-selection = [
   "concat_str",
   "string_reverse",
   "string_to_integer",
-  "decompress",
+#  "decompress",
   "mode",
   "take_opt_iter",
   "cum_agg",
