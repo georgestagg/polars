@@ -154,6 +154,7 @@ impl PyLazyFrame {
         file_cache_ttl: Option<u64>,
         include_file_paths: Option<String>,
     ) -> PyResult<Self> {
+        #[cfg(feature = "cloud")]
         use cloud::credential_provider::PlCredentialProvider;
 
         let null_values = null_values.map(|w| w.0);
@@ -369,6 +370,7 @@ impl PyLazyFrame {
         file_cache_ttl: Option<u64>,
         include_file_paths: Option<String>,
     ) -> PyResult<Self> {
+        #[cfg(feature = "cloud")]
         use cloud::credential_provider::PlCredentialProvider;
         let row_index = row_index.map(|(name, offset)| RowIndex {
             name: name.into(),
@@ -387,7 +389,6 @@ impl PyLazyFrame {
             cache,
             rechunk,
             row_index,
-            #[cfg(feature = "cloud")]
             cloud_options: None,
             hive_options,
             include_file_paths: include_file_paths.map(|x| x.into()),
