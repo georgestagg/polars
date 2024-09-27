@@ -347,7 +347,6 @@ impl PyLazyFrame {
             cache,
             rechunk,
             row_index,
-            #[cfg(feature = "cloud")]
             cloud_options: None,
             hive_options,
             include_file_paths: include_file_paths.map(|x| x.into()),
