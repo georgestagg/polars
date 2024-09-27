@@ -154,6 +154,7 @@ impl PyLazyFrame {
         file_cache_ttl: Option<u64>,
         include_file_paths: Option<String>,
     ) -> PyResult<Self> {
+        #[cfg(feature = "cloud")]
         use cloud::credential_provider::PlCredentialProvider;
 
         let null_values = null_values.map(|w| w.0);
@@ -369,6 +370,7 @@ impl PyLazyFrame {
         file_cache_ttl: Option<u64>,
         include_file_paths: Option<String>,
     ) -> PyResult<Self> {
+        #[cfg(feature = "cloud")]
         use cloud::credential_provider::PlCredentialProvider;
         let row_index = row_index.map(|(name, offset)| RowIndex {
             name: name.into(),
@@ -387,7 +389,6 @@ impl PyLazyFrame {
             cache,
             rechunk,
             row_index,
-            #[cfg(feature = "cloud")]
             cloud_options: None,
             hive_options,
             include_file_paths: include_file_paths.map(|x| x.into()),
@@ -738,6 +739,7 @@ impl PyLazyFrame {
             maintain_order,
         };
 
+        #[cfg(feature = "cloud")]
         let cloud_options = {
             let cloud_options =
                 parse_cloud_options(path.to_str().unwrap(), cloud_options.unwrap_or_default())?;
@@ -749,6 +751,9 @@ impl PyLazyFrame {
                     ),
             )
         };
+
+        #[cfg(not(feature = "cloud"))]
+        let cloud_options = None;
 
         // if we don't allow threads and we have udfs trying to acquire the gil from different
         // threads we deadlock.
@@ -812,6 +817,7 @@ impl PyLazyFrame {
             serialize_options,
         };
 
+        #[cfg(feature = "cloud")]
         let cloud_options = {
             let cloud_options =
                 parse_cloud_options(path.to_str().unwrap(), cloud_options.unwrap_or_default())?;
@@ -823,6 +829,9 @@ impl PyLazyFrame {
                     ),
             )
         };
+
+        #[cfg(not(feature = "cloud"))]
+        let cloud_options = None;
 
         // if we don't allow threads and we have udfs trying to acquire the gil from different
         // threads we deadlock.
