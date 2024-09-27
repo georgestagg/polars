@@ -20,7 +20,7 @@ polars-time = { workspace = true }
 polars-utils = { workspace = true }
 
 # TODO! remove this once truly activated. This is required to make sdist building work
-polars-stream = { workspace = true }
+# polars-stream = { workspace = true }
 
 ahash = { workspace = true }
 arboard = { workspace = true, optional = true }
@@ -197,7 +197,7 @@ operations = [
   "rle",
   "extract_groups",
   "pivot",
-  "extract_jsonpath",
+#  "extract_jsonpath",
   "asof_join",
   "cross_join",
   "pct_change",
@@ -212,14 +212,15 @@ operations = [
 ]
 
 io = [
-  "json",
-  "parquet",
+  "serde_json",
+#  "json",
+#  "parquet",
   "ipc",
   "ipc_streaming",
   "avro",
   "csv",
-  "cloud",
-  "clipboard",
+#  "cloud",
+#  "clipboard",
 ]
 
 optimizations = [
@@ -242,13 +243,13 @@ all = [
   "operations",
   "dtypes",
   "meta",
-  "decompress",
+#  "decompress",
   "regex",
   "sql",
   "binary_encoding",
   "ffi_plugin",
-  "polars_cloud",
-  # "new_streaming",
+#  "polars_cloud",
+#  "new_streaming",
 ]
 
 # we cannot conditionally activate simd
