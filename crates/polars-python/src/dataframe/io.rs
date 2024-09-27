@@ -3,7 +3,9 @@ use std::io::BufWriter;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
+#[cfg(feature = "cloud")]
 use cloud::credential_provider::PlCredentialProvider;
+
 #[cfg(feature = "avro")]
 use polars::io::avro::AvroCompression;
 use polars::io::RowIndex;
@@ -22,7 +24,10 @@ use crate::file::{
     get_either_file, get_file_like, get_mmap_bytes_reader, get_mmap_bytes_reader_and_path,
     read_if_bytesio, EitherRustPythonFile,
 };
-use crate::prelude::{parse_cloud_options, PyCompatLevel};
+use crate::prelude::PyCompatLevel;
+
+#[cfg(feature = "cloud")]
+use crate::prelude::parse_cloud_options;
 
 #[pymethods]
 impl PyDataFrame {
@@ -369,6 +374,7 @@ impl PyDataFrame {
     ) -> PyResult<()> {
         let null = null_value.unwrap_or_default();
 
+        #[cfg(feature = "cloud")]
         let cloud_options = if let Ok(path) = py_f.extract::<Cow<str>>(py) {
             let cloud_options = parse_cloud_options(&path, cloud_options.unwrap_or_default())?;
             Some(
@@ -381,6 +387,9 @@ impl PyDataFrame {
         } else {
             None
         };
+
+        #[cfg(not(feature = "cloud"))]
+        let cloud_options = None;
 
         let f = crate::file::try_get_writeable(py_f, cloud_options.as_ref())?;
 
@@ -454,6 +463,7 @@ impl PyDataFrame {
             return Ok(());
         };
 
+        #[cfg(feature = "cloud")]
         let cloud_options = if let Ok(path) = py_f.extract::<Cow<str>>(py) {
             let cloud_options = parse_cloud_options(&path, cloud_options.unwrap_or_default())?;
             Some(
@@ -466,6 +476,9 @@ impl PyDataFrame {
         } else {
             None
         };
+
+        #[cfg(not(feature = "cloud"))]
+        let cloud_options = None;
 
         let f = crate::file::try_get_writeable(py_f, cloud_options.as_ref())?;
 
@@ -522,6 +535,7 @@ impl PyDataFrame {
         credential_provider: Option<PyObject>,
         retries: usize,
     ) -> PyResult<()> {
+        #[cfg(feature = "cloud")]
         let cloud_options = if let Ok(path) = py_f.extract::<Cow<str>>(py) {
             let cloud_options = parse_cloud_options(&path, cloud_options.unwrap_or_default())?;
             Some(
@@ -534,6 +548,9 @@ impl PyDataFrame {
         } else {
             None
         };
+
+        #[cfg(not(feature = "cloud"))]
+        let cloud_options = None;
 
         let f = crate::file::try_get_writeable(py_f, cloud_options.as_ref())?;
 
