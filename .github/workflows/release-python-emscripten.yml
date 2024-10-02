@@ -1,0 +1,54 @@
+name: Release Python (Emscripten)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['emscripten-ci']
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-wheels:
+    runs-on: self-hosted
+    container: ghcr.io/georgestagg/polars:rust-ci
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: emscripten-ci
+          path: polars
+      
+      - name: Setup rustup
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Check disk space
+        run: df -h
+
+      - name: Setup Python
+        run: |
+          python3 -m venv /opt/python
+          /opt/python/bin/pip install -r polars/py-polars/requirements-dev.txt
+          echo "/opt/python/bin" >> $GITHUB_PATH
+
+      - name: Build wheel
+        working-directory: polars/py-polars
+        run: |
+          rustup toolchain link stage2 /opt/rust/build/host/stage2
+          rustup toolchain list
+          rustc +stage2 -vV
+          RUSTUP_TOOLCHAIN=stage2 maturin build --release -j 2 -o dist \
+            --target wasm32-unknown-emscripten -i python3.10 -- \
+            -C link-self-contained=no
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-polars-emscripten-wasm32
+          path: polars/py-polars/dist/*.whl
