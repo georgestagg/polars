@@ -2,8 +2,10 @@ name: Release Python (Emscripten)
 
 on:
   workflow_dispatch:
-  push:
-    branches: ['emscripten-ci']
+    inputs:
+      sha:
+        description: Commit SHA
+        type: string
 
 env:
   CARGO_INCREMENTAL: 0
@@ -15,14 +17,14 @@ defaults:
     shell: bash
 
 jobs:
-  build-wheels:
+  build-wheel:
     runs-on: self-hosted
     container: ghcr.io/georgestagg/polars:rust-ci
 
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: emscripten-ci
+          ref: ${{ inputs.sha || 'emscripten' }}
           path: polars
       
       - name: Setup rustup
@@ -52,3 +54,51 @@ jobs:
         with:
           name: wheel-polars-emscripten-wasm32
           path: polars/py-polars/dist/*.whl
+
+  publish-to-github:
+    needs: build-wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || 'emscripten' }}
+
+      - name: Download wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel-polars-emscripten-wasm32
+          path: dist
+
+      - name: Get version from Cargo.toml
+        id: version
+        working-directory: py-polars
+        run: |
+          VERSION=$(grep -m 1 -oP 'version = "\K[^"]+' Cargo.toml)
+          if [[ "$VERSION" == *"-"* ]]; then
+            IS_PRERELEASE=true
+          else
+            IS_PRERELEASE=false
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        uses: elgohr/Github-Release-Action@v5
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          title: Python Polars (Pyodide) ${{ steps.version.outputs.version }}
+          tag: py-${{ steps.version.outputs.version }}-wasm
+
+      - name: Upload wheel to GitHub release
+        run: gh release upload $TAG $FILES --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: py-${{ steps.version.outputs.version }}-wasm
+          FILES: dist/*.whl
+
+      - name: Publish GitHub release
+        run: gh release edit $TAG --draft=false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: py-${{ steps.version.outputs.version }}-wasm
