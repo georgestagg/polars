@@ -1,8 +1,7 @@
 name: Build and publish Rust container
 
 on:
-  push:
-    branches: ['rust-ci']
+  workflow_dispatch:
 
 jobs:
   build-and-publish-docker:
@@ -13,6 +12,7 @@ jobs:
     steps:
       - name: Checkout Polars
         uses: actions/checkout@v4
+        ref: emscripten-ci
         with:
           sparse-checkout: .github/workflows/containers/rust-ci/
       - name: Log in to the GitHub Container registry

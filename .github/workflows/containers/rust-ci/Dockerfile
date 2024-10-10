@@ -21,7 +21,7 @@ RUN /opt/emsdk/emsdk install "${EMSCRIPTEN_VERSION}" && \
 ENV PATH="/opt/emsdk:/opt/emsdk/upstream/emscripten:$PATH"
 ENV EMSDK="/opt/emsdk"
 
-RUN git clone --depth=1 https://github.com/rust-lang/rust.git
+RUN git clone https://github.com/rust-lang/rust.git && cd rust && git checkout 7caad6925314911eefe54b040d4bc5be940e8f92
 
 RUN curl -O -L https://github.com/georgestagg/llvm-project/archive/refs/heads/wasm-ci.tar.gz && \
   tar -xf wasm-ci.tar.gz && \
