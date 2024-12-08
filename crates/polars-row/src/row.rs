@@ -89,26 +89,21 @@ impl EncodingField {
 #[derive(Default, Clone)]
 pub struct RowsEncoded {
     pub(crate) values: Vec<u8>,
-    pub(crate) offsets: Vec<usize>,
+    pub(crate) offsets: Vec<u64>,
 }
 
-fn checks(offsets: &[usize]) {
-    assert_eq!(
-        size_of::<usize>(),
-        size_of::<i64>(),
-        "only supported on 64bit arch"
-    );
+fn checks(offsets: &[u64]) {
     assert!(
         (*offsets.last().unwrap() as u64) < i64::MAX as u64,
         "overflow"
     );
 }
 
-unsafe fn rows_to_array(buf: Vec<u8>, offsets: Vec<usize>) -> BinaryArray<i64> {
+unsafe fn rows_to_array(buf: Vec<u8>, offsets: Vec<u64>) -> BinaryArray<i64> {
     checks(&offsets);
 
     // SAFETY: we checked overflow
-    let offsets = bytemuck::cast_vec::<usize, i64>(offsets);
+    let offsets = bytemuck::cast_vec::<u64, i64>(offsets);
 
     // SAFETY: monotonically increasing
     let offsets = Offsets::new_unchecked(offsets);
@@ -117,7 +112,7 @@ unsafe fn rows_to_array(buf: Vec<u8>, offsets: Vec<usize>) -> BinaryArray<i64> {
 }
 
 impl RowsEncoded {
-    pub(crate) fn new(values: Vec<u8>, offsets: Vec<usize>) -> Self {
+    pub(crate) fn new(values: Vec<u8>, offsets: Vec<u64>) -> Self {
         RowsEncoded { values, offsets }
     }
 
@@ -141,7 +136,7 @@ impl RowsEncoded {
 
         unsafe {
             let (_, values, _) = mmap::slice(&self.values).into_inner();
-            let offsets = bytemuck::cast_slice::<usize, i64>(self.offsets.as_slice());
+            let offsets = bytemuck::cast_slice::<u64, i64>(self.offsets.as_slice());
             let (_, offsets, _) = mmap::slice(offsets).into_inner();
             let offsets = OffsetsBuffer::new_unchecked(offsets);
 
@@ -168,8 +163,8 @@ impl RowsEncoded {
 }
 
 pub struct RowsEncodedIter<'a> {
-    offset: usize,
-    end: std::slice::Iter<'a, usize>,
+    offset: u64,
+    end: std::slice::Iter<'a, u64>,
     values: &'a [u8],
 }
 
@@ -178,7 +173,7 @@ impl<'a> Iterator for RowsEncodedIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let new_offset = *self.end.next()?;
-        let payload = unsafe { self.values.get_unchecked(self.offset..new_offset) };
+        let payload = unsafe { self.values.get_unchecked((self.offset as usize)..(new_offset as usize)) };
         self.offset = new_offset;
         Some(payload)
     }

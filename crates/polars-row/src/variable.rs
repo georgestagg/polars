@@ -86,12 +86,12 @@ pub(crate) unsafe fn encode_str_iter<'a, I: Iterator<Item = Option<&'a str>>>(
     buffer: &mut [MaybeUninit<u8>],
     input: I,
     field: &EncodingField,
-    offsets: &mut [usize],
+    offsets: &mut [u64],
 ) {
     for (offset, opt_value) in offsets.iter_mut().zip(input) {
-        let dst = buffer.get_unchecked_mut(*offset..);
+        let dst = buffer.get_unchecked_mut((*offset as usize)..);
         let written_len = encode_one_str(dst, opt_value, field);
-        *offset += written_len;
+        *offset += written_len as u64;
     }
 }
 
@@ -206,19 +206,19 @@ pub(crate) unsafe fn encode_iter<'a, I: Iterator<Item = Option<&'a [u8]>>>(
     buffer: &mut [MaybeUninit<u8>],
     input: I,
     field: &EncodingField,
-    row_starts: &mut [usize],
+    row_starts: &mut [u64],
 ) {
     if field.no_order {
         for (offset, opt_value) in row_starts.iter_mut().zip(input) {
-            let dst = buffer.get_unchecked_mut(*offset..);
+            let dst = buffer.get_unchecked_mut((*offset as usize)..);
             let written_len = encode_one_no_order(dst, opt_value.map(|v| v.as_uninit()), field);
-            *offset += written_len;
+            *offset += written_len as u64;
         }
     } else {
         for (offset, opt_value) in row_starts.iter_mut().zip(input) {
-            let dst = buffer.get_unchecked_mut(*offset..);
+            let dst = buffer.get_unchecked_mut((*offset as usize)..);
             let written_len = encode_one(dst, opt_value.map(|v| v.as_uninit()), field);
-            *offset += written_len;
+            *offset += written_len as u64;
         }
     }
 }

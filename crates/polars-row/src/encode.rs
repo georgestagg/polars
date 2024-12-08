@@ -56,7 +56,7 @@ pub fn convert_columns_amortized<'a>(
 
     // Create an offsets array, we append 0 at the beginning here so it can serve as the final
     // offset array.
-    let mut offsets = Vec::with_capacity(num_rows + 1);
+    let mut offsets = Vec::<u64>::with_capacity(num_rows + 1);
     offsets.push(0);
     row_widths.extend_with_offsets(&mut offsets);
 
@@ -173,17 +173,17 @@ impl RowWidths {
         }
     }
 
-    fn extend_with_offsets(&self, out: &mut Vec<usize>) {
+    fn extend_with_offsets(&self, out: &mut Vec<u64>) {
         match self {
             RowWidths::Constant { num_rows, width } => {
-                out.extend((0..*num_rows).map(|i| i * width));
+                out.extend((0..*num_rows).map(|i| (i * width) as u64));
             },
             RowWidths::Variable { widths, sum: _ } => {
                 let mut next = 0;
                 out.extend(widths.iter().map(|w| {
                     let current = next;
                     next += w;
-                    current
+                    current as u64
                 }));
             },
         }
@@ -599,7 +599,7 @@ unsafe fn encode_flat_array(
     buffer: &mut [MaybeUninit<u8>],
     array: &dyn Array,
     field: &EncodingField,
-    offsets: &mut [usize],
+    offsets: &mut [u64],
 ) {
     use ArrowDataType as D;
     match array.dtype() {
@@ -700,7 +700,7 @@ unsafe fn encode_flat_array(
 
 #[derive(Default)]
 struct EncodeScratches {
-    nested_offsets: Vec<usize>,
+    nested_offsets: Vec<u64>,
     nested_buffer: Vec<u8>,
 }
 
@@ -715,7 +715,7 @@ unsafe fn encode_array(
     buffer: &mut [MaybeUninit<u8>],
     encoder: &Encoder,
     field: &EncodingField,
-    offsets: &mut [usize],
+    offsets: &mut [u64],
     scratches: &mut EncodeScratches,
 ) {
     match &encoder.state {
@@ -747,13 +747,13 @@ unsafe fn encode_array(
                         array.offsets().offset_and_length_iter().enumerate()
                     {
                         for j in offset..offset + length {
-                            buffer[offsets[i]] = MaybeUninit::new(list_continuation_token);
+                            buffer[offsets[i] as usize] = MaybeUninit::new(list_continuation_token);
                             offsets[i] += 1;
 
                             nested_offsets.push(offsets[i]);
-                            offsets[i] += nested_encoder.widths.get(j);
+                            offsets[i] += nested_encoder.widths.get(j) as u64;
                         }
-                        buffer[offsets[i]] = MaybeUninit::new(list_termination_token);
+                        buffer[offsets[i] as usize] = MaybeUninit::new(list_termination_token);
                         offsets[i] += 1;
                     }
                 },
@@ -765,19 +765,19 @@ unsafe fn encode_array(
                         .enumerate()
                     {
                         if !is_valid {
-                            buffer[offsets[i]] = MaybeUninit::new(list_null_sentinel);
+                            buffer[offsets[i] as usize] = MaybeUninit::new(list_null_sentinel);
                             offsets[i] += 1;
                             continue;
                         }
 
                         for j in offset..offset + length {
-                            buffer[offsets[i]] = MaybeUninit::new(list_continuation_token);
+                            buffer[offsets[i] as usize] = MaybeUninit::new(list_continuation_token);
                             offsets[i] += 1;
 
                             nested_offsets.push(offsets[i]);
-                            offsets[i] += nested_encoder.widths.get(j);
+                            offsets[i] += nested_encoder.widths.get(j) as u64;
                         }
-                        buffer[offsets[i]] = MaybeUninit::new(list_termination_token);
+                        buffer[offsets[i] as usize] = MaybeUninit::new(list_termination_token);
                         offsets[i] += 1;
                     }
                 },
@@ -808,7 +808,7 @@ unsafe fn encode_array(
             for (i, offset) in offsets.iter_mut().enumerate() {
                 for j in 0..*width {
                     child_offsets.push(*offset);
-                    *offset += array.widths.get((i * width) + j);
+                    *offset += array.widths.get((i * width) + j) as u64;
                 }
             }
             encode_array(buffer, array.as_ref(), field, &mut child_offsets, scratches);
@@ -830,13 +830,13 @@ unsafe fn encode_validity(
     buffer: &mut [MaybeUninit<u8>],
     validity: Option<&Bitmap>,
     field: &EncodingField,
-    row_starts: &mut [usize],
+    row_starts: &mut [u64],
 ) {
     let null_sentinel = get_null_sentinel(field);
     match validity {
         None => {
             for row_start in row_starts.iter_mut() {
-                buffer[*row_start] = MaybeUninit::new(1);
+                buffer[*row_start as usize] = MaybeUninit::new(1);
                 *row_start += 1;
             }
         },
@@ -847,7 +847,7 @@ unsafe fn encode_validity(
                 } else {
                     MaybeUninit::new(null_sentinel)
                 };
-                buffer[*row_start] = v;
+                buffer[*row_start as usize] = v;
                 *row_start += 1;
             }
         },
@@ -858,7 +858,7 @@ unsafe fn encode_primitive<T: NativeType + FixedLengthEncoding>(
     buffer: &mut [MaybeUninit<u8>],
     arr: &PrimitiveArray<T>,
     field: &EncodingField,
-    offsets: &mut [usize],
+    offsets: &mut [u64],
 ) {
     if arr.null_count() == 0 {
         crate::fixed::encode_slice(buffer, arr.values().as_slice(), field, offsets)
