@@ -299,11 +299,11 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Publish to PyPI
-        if: inputs.dry-run == false
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          verbose: true
+#      - name: Publish to PyPI
+#        if: inputs.dry-run == false
+#        uses: pypa/gh-action-pypi-publish@release/v1
+#        with:
+#          verbose: true
 
   publish-to-github:
     needs: [publish-to-pypi, build-wheel-pyodide]
